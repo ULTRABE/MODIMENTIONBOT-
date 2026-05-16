@@ -1,85 +1,82 @@
-# 𝐌𝐎𝐃𝐈 𝐌𝐄𝐍𝐓𝐈𝐎𝐍 𝐁𝐎𝐓 - Deployment Guide
+# Ubuntu 24.04 Fix + Deployment Guide (Pyrogram Bot)
 
-## Quick Setup for Any Platform
+Use this when you get errors like:
+- `.venv/bin/activate: No such file or directory`
+- `python3.12-venv` missing
+- broken virtual environment
 
-### Files Included:
-- `main.py` - Main bot script
-- `modi_bot_image.jpeg` - Welcome image
-- `bot_requirements.txt` - Python dependencies
-- `.env.example` - Environment variables template
-- `README.md` - Full documentation
-- `DEPLOYMENT_GUIDE.md` - This guide
-
-### Environment Variables:
-```
-API_ID=22714261
-API_HASH=ba5f5b61893c726ff1092caf79425300
-BOT_TOKEN=7995762340:AAEyklzw1L3knoPvYUH5_7MWjPbaXEcdcdw
-```
-
-### Dependencies:
+## 1) Install required packages
 ```bash
-pip install pyrogram tgcrypto
+sudo apt update
+sudo apt install -y python3.12 python3.12-venv python3-pip
 ```
 
-### Run Command:
+## 2) Recreate virtual environment (clean fix)
 ```bash
-python main.py
+cd /opt/june-hosting-bot
+rm -rf .venv
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r bot_requirements.txt
 ```
 
-## Platform-Specific Deployment:
+## 3) Configure environment
+Create `.env` in project root (`/opt/june-hosting-bot/.env`):
+```env
+API_ID=36371827
+API_HASH=4b33c6649f49006c2954c1635e448574
+BOT_TOKEN=8269981439:AAHawY-6QKlG6DxgUw1SwlDBZHo-XZyEWxY
+OWNER_IDS=8780206093
+ADMIN_IDS=8780206093,7363967303
+DEFAULT_PLAN=free
+PLAN_FREE_LIMIT=1
+PLAN_PLUS_LIMIT=3
+PLAN_PRO_LIMIT=6
+MAX_RAM_MB=1024
+```
 
-### 1. Heroku
-1. Create new app on Heroku
-2. Connect to GitHub or upload files
-3. Add environment variables in Settings > Config Vars
-4. Deploy from main branch
+## 4) Use safe starter script
+`start.sh` in repo root safely loads `.env` only if it exists and runs `.venv/bin/python main.py`.
 
-### 2. Railway
-1. Create new project
-2. Deploy from GitHub or upload files
-3. Add environment variables in Variables tab
-4. Auto-deploy enabled
+Run once manually:
+```bash
+cd /opt/june-hosting-bot
+./start.sh
+```
 
-### 3. Render
-1. Create new Web Service
-2. Connect repository or upload
-3. Add environment variables
-4. Build command: `pip install -r bot_requirements.txt`
-5. Start command: `python main.py`
+## 5) Install/refresh systemd service
+Copy service file:
+```bash
+sudo cp june-hosting-bot.service /etc/systemd/system/june-hosting-bot.service
+sudo systemctl daemon-reload
+sudo systemctl enable june-hosting-bot
+sudo systemctl restart june-hosting-bot
+```
 
-### 4. PythonAnywhere
-1. Upload files to your account
-2. Create new console
-3. Install dependencies: `pip3.10 install --user pyrogram tgcrypto`
-4. Run: `python3.10 main.py`
+## 6) Verify service health
+```bash
+systemctl status june-hosting-bot --no-pager
+```
+Expected:
+- `Active: active (running)`
 
-### 5. VPS/Server
-1. Upload files to server
-2. Install Python 3.7+
-3. Install dependencies: `pip install -r bot_requirements.txt`
-4. Run: `python main.py`
-5. Use screen/tmux for background: `screen -S bot python main.py`
+If failing, print logs:
+```bash
+journalctl -u june-hosting-bot -n 120 --no-pager
+```
 
-## Bot Commands:
-- `/awake` or `/all` - Mention all members
-- `/remove` or `/clean` - Remove deleted accounts
-- `/admins` or `/staff` - List administrators
-- `/bots` - Show all bots
-- `/stop` or `/cancel` - Stop ongoing process
-- `/start` - Welcome message with image
-- `/help` - Show commands
-
-## Creator:
-- Name: 𝐍𝐀गے𝐒𝐇व𝐑
-- Username: @Bhosade
-- Community: https://t.me/Realm_Of_Anime
-
-## Important Notes:
-1. Bot needs admin permissions in groups for full functionality
-2. `/remove` command requires bot to have admin rights
-3. Custom image will show with welcome message
-4. Works in both groups and channels
-5. Has built-in flood protection and queue management
-
-Enjoy your 𝐌𝐎𝐃𝐈 𝐌𝐄𝐍𝐓𝐈𝐎𝐍 𝐁𝐎𝐓! 🚀
+## 7) Quick recovery command set
+```bash
+cd /opt/june-hosting-bot \
+&& sudo apt update \
+&& sudo apt install -y python3.12 python3.12-venv python3-pip \
+&& rm -rf .venv \
+&& python3.12 -m venv .venv \
+&& source .venv/bin/activate \
+&& python -m pip install --upgrade pip \
+&& pip install -r bot_requirements.txt \
+&& sudo systemctl daemon-reload \
+&& sudo systemctl restart june-hosting-bot \
+&& systemctl status june-hosting-bot --no-pager
+```

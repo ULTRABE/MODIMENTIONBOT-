@@ -1,0 +1,15 @@
+[Unit]
+Description=June Private Hosting Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/june-hosting-bot
+ExecStart=/opt/june-hosting-bot/start.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
