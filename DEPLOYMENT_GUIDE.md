@@ -1,85 +1,44 @@
-# 𝐌𝐎𝐃𝐈 𝐌𝐄𝐍𝐓𝐈𝐎𝐍 𝐁𝐎𝐓 - Deployment Guide
+# Deployment Guide (Hostinger KVM VPS)
 
-## Quick Setup for Any Platform
-
-### Files Included:
-- `main.py` - Main bot script
-- `modi_bot_image.jpeg` - Welcome image
-- `bot_requirements.txt` - Python dependencies
-- `.env.example` - Environment variables template
-- `README.md` - Full documentation
-- `DEPLOYMENT_GUIDE.md` - This guide
-
-### Environment Variables:
-```
-API_ID=22714261
-API_HASH=ba5f5b61893c726ff1092caf79425300
-BOT_TOKEN=7995762340:AAEyklzw1L3knoPvYUH5_7MWjPbaXEcdcdw
-```
-
-### Dependencies:
+## 1) System packages
 ```bash
-pip install pyrogram tgcrypto
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip nodejs npm
 ```
 
-### Run Command:
+## 2) Upload bot files
+Upload repository contents to your VPS, then:
 ```bash
-python main.py
+cd /path/to/repo
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r bot_requirements.txt
 ```
 
-## Platform-Specific Deployment:
+## 3) Set environment variables
+```bash
+export API_ID="YOUR_API_ID"
+export API_HASH="YOUR_API_HASH"
+export BOT_TOKEN="YOUR_BOT_TOKEN"
+export OWNER_IDS="123456789"
+export ADMIN_IDS="123456789"
+export MAX_RAM_MB="1024"
+```
 
-### 1. Heroku
-1. Create new app on Heroku
-2. Connect to GitHub or upload files
-3. Add environment variables in Settings > Config Vars
-4. Deploy from main branch
+## 4) Start bot
+```bash
+source .venv/bin/activate
+python3 main.py
+```
 
-### 2. Railway
-1. Create new project
-2. Deploy from GitHub or upload files
-3. Add environment variables in Variables tab
-4. Auto-deploy enabled
+## 5) Production (recommended)
+Use `systemd` for auto-restart and uptime:
+- service restart on crash
+- boot start
+- log persistence
 
-### 3. Render
-1. Create new Web Service
-2. Connect repository or upload
-3. Add environment variables
-4. Build command: `pip install -r bot_requirements.txt`
-5. Start command: `python main.py`
-
-### 4. PythonAnywhere
-1. Upload files to your account
-2. Create new console
-3. Install dependencies: `pip3.10 install --user pyrogram tgcrypto`
-4. Run: `python3.10 main.py`
-
-### 5. VPS/Server
-1. Upload files to server
-2. Install Python 3.7+
-3. Install dependencies: `pip install -r bot_requirements.txt`
-4. Run: `python main.py`
-5. Use screen/tmux for background: `screen -S bot python main.py`
-
-## Bot Commands:
-- `/awake` or `/all` - Mention all members
-- `/remove` or `/clean` - Remove deleted accounts
-- `/admins` or `/staff` - List administrators
-- `/bots` - Show all bots
-- `/stop` or `/cancel` - Stop ongoing process
-- `/start` - Welcome message with image
-- `/help` - Show commands
-
-## Creator:
-- Name: 𝐍𝐀गے𝐒𝐇व𝐑
-- Username: @Bhosade
-- Community: https://t.me/Realm_Of_Anime
-
-## Important Notes:
-1. Bot needs admin permissions in groups for full functionality
-2. `/remove` command requires bot to have admin rights
-3. Custom image will show with welcome message
-4. Works in both groups and channels
-5. Has built-in flood protection and queue management
-
-Enjoy your 𝐌𝐎𝐃𝐈 𝐌𝐄𝐍𝐓𝐈𝐎𝐍 𝐁𝐎𝐓! 🚀
+## Capacity target
+For 5-8 hosted single-file bots on 2 vCPU / 8GB RAM:
+- keep `MAX_RAM_MB` around 512-1024 per Node process
+- monitor with `htop`/`ps`
+- avoid CPU-heavy scripts in parallel
