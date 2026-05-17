@@ -53,13 +53,13 @@ def make_job_id(uid:int,f:str)->str: return f"{uid}:{sanitize(f)}"
 def is_running(pid:int|None)->bool: return bool(pid and psutil.pid_exists(pid))
 def launch_cmd(lang:str,p:Path)->list[str]: return ['python3',str(p)] if lang=='python' else ['node',f'--max-old-space-size={MAX_RAM_MB}',str(p)]
 
-def stop_job(jid:str)->str:
+async def stop_job(jid:str)->str:
     j=STATE['jobs'].get(jid); 
     if not j: return 'missing'
     pid=j.get('pid')
     if not is_running(pid): j['status']='offline'; j['pid']=None; save_state(); return 'already_offline'
     try:
-        os.killpg(os.getpgid(pid), signal.SIGTERM); time.sleep(1)
+        os.killpg(os.getpgid(pid), signal.SIGTERM); await asyncio.sleep(1)
         if is_running(pid): os.killpg(os.getpgid(pid), signal.SIGKILL)
     except Exception: pass
     j['status']='offline'; j['pid']=None; j['updated_at']=now_ts(); save_state(); return 'stopped'
@@ -188,7 +188,7 @@ async def upload(_,m:Message):
     STATE['jobs'][jid]={'owner_id':uid,'file_name':safe,'language':lang,'plan':get_plan(uid),'status':'offline','pid':None,'created_at':now_ts(),'updated_at':now_ts()}; save_state()
     start_job(jid); await asyncio.sleep(2); refresh_status(STATE['jobs'][jid]); save_state()
     if STATE['jobs'][jid]['status']!='online':
-        log=tail_logs(jid,20); hint=parse_import_error(log); stop_job(jid); del STATE['jobs'][jid]; path.unlink(missing_ok=True); save_state()
+        log=tail_logs(jid,20); hint=parse_import_error(log); await stop_job(jid); del STATE['jobs'][jid]; path.unlink(missing_ok=True); save_state()
         msg=f"❌ Upload failed while starting `{safe}`.\n\n```\n{log}\n```" + (f"\n\n💡 Possible dependency issue: `{hint}`" if hint else '')
         return await m.reply(msg)
     await m.reply(f"✅ Uploaded and running: `{safe}`", reply_markup=file_menu(jid))
@@ -213,9 +213,13 @@ async def callbacks(_,cq):
     if uid!=j['owner_id'] and not is_admin(uid): return await cq.answer('Not allowed',show_alert=True)
     if action=='status': await cq.message.edit_text(job_card(jid),reply_markup=file_menu(jid)); return await cq.answer('Refreshed')
     if action=='logs': await cq.message.reply(f"📜 Logs for `{j['file_name']}`\n```\n{tail_logs(jid,30)}\n```"); return await cq.answer('Latest logs sent')
-    if action=='restart': res=(stop_job(jid),start_job(jid))[1]; await cq.message.edit_text(job_card(jid),reply_markup=file_menu(jid)); return await cq.answer(f'Restart: {res}')
-    if action=='stop': res=stop_job(jid); await cq.message.edit_text(job_card(jid),reply_markup=file_menu(jid)); return await cq.answer(res)
-    if action=='delete': stop_job(jid); file_path(j['owner_id'],j['file_name']).unlink(missing_ok=True); del STATE['jobs'][jid]; save_state(); await cq.message.edit_text('🗑 File deleted.'); return await cq.answer('Deleted')
+    if action=='restart':
+        await stop_job(jid)
+        res=start_job(jid)
+        await cq.message.edit_text(job_card(jid),reply_markup=file_menu(jid))
+        return await cq.answer(f'Restart: {res}')
+    if action=='stop': res=await stop_job(jid); await cq.message.edit_text(job_card(jid),reply_markup=file_menu(jid)); return await cq.answer(res)
+    if action=='delete': await stop_job(jid); file_path(j['owner_id'],j['file_name']).unlink(missing_ok=True); del STATE['jobs'][jid]; save_state(); await cq.message.edit_text('🗑 File deleted.'); return await cq.answer('Deleted')
 
 if __name__=='__main__':
     load_state(); print('Bot starting...'); app.run()
